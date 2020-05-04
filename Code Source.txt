@@ -1,0 +1,131 @@
+Movielens Case Study :-
+
+//Import the libraries --> 
+
+ import pandas as pd 
+ import numpy as np
+ import matplotlib.pyplot as plt
+ from matplotlib.style import use
+ import seaborn as sns
+ from sklearn.model_selection import train_test_split
+ from sklearn.metrics import mean_squared_error
+ %matplotlib inline
+
+//Import the three datasets -->
+
+ movies = pd.read_csv(r'movies.dat', sep = "::", names = ['MovieID','Title','Genres'], engine = 'python')
+ movies.head()
+
+ ratings = pd.read_csv(r'ratings.dat', sep = "::", names = ['UserID','MovieID','Rating','Timestamp'], engine = 'python')
+ ratings.head()
+
+ users = pd.read_csv(r'users.dat', sep = "::", names = ['UserID','Gender','Age','Occupation','Zip-Code'], engine = 'python')
+ users.head()
+
+//To Check Size of Datasets -->
+
+ movies.shape
+ ratings.shape
+ users.shape
+
+//Create a new dataset [Master_Data] with the following columns MovieID Title UserID Age Gender Occupation Rating -->
+
+ movie_ratings = pd.merge(movies, ratings, on = 'MovieID')
+ movie_ratings.head()
+ movie_ratings.shape
+ movie_ratings_users = pd.merge(movie_ratings, users, on = 'UserID')
+ movie_ratings_users.head()
+ movie_ratings_users.shape
+
+//Explore the datasets using visual representations (graphs or tables) -->
+
+  1.User Age Distribution:
+     #Visualize age distribution of users
+
+        user.Age.plot.hist(bins=50)
+        plt.style.use('ggplot')
+        plt.title('User Age Distribution\n')
+        plt.xlabel('Age')
+        plt.show()  
+
+  2.User rating of the movie “Toy Story”:
+     #Extract data for the movie Toy Story
+
+        user_rating_toy_story = movie_ratings_users.loc[movie_ratings_users["MovieID"]==1]
+        user_rating_toy_story.head()
+        user_rating_toy_story['Rating'].mean()
+
+  3.Top 25 movies by viewership rating:
+     #Explore data for viewership by movie title
+
+        data_count = movie_ratings_users['Title'].value_counts()
+        data_count[0:25]
+
+     #Explore data for viewership by movie title
+
+        titlewise_rating = pd.DataFrame(movie_ratings_users.groupby('Title')['Rating'].mean())
+        titlewise_rating.head()
+        top_25 =  titlewise_rating.sort_values('Rating', ascending= False).head(25)
+        top_25
+
+  4.Find the ratings for all the movies reviewed by for a particular user of user id = 2696:
+     #Explore data for a perticualr user
+
+        user_id_2696 = movie_ratings_users[movie_ratings_users["UserID"]==2696]
+        user_id_2696.head()
+        user_id_2696["Rating"].head()
+
+//Feature Engineering -->
+  1.Find out all the unique genres:
+        
+        movie_ratings_users["Genres"].head()
+        movie_ratings_users.Genres = movie_ratings_users["Genres"].str.split("|")
+        movie_ratings_users.Genres.head()
+        data5k = movie_ratings_users[:5000] 
+        x = []
+        for rn in range(len(data5k)):
+            x = x + data5k.Genres[rn]
+        
+        print(x)
+        unique_genres = list(set(x))
+        print (unique_genres)
+        print (len(unique_genres))
+  2.Create a separate column for each genre category with a one-hot encoding ( 1 and 0) whether or not the movie belongs to that genre:
+
+        unique_genres = pd.Series(unique_genres)
+        df = pd.DataFrame()
+        for row in data5k.Genres:
+            df = df.append(unique_genres.isin(row), ignore_index = True)
+
+        df[:5]
+        df.columns = unique_genres
+        df.head()
+        data5k = pd.concat((data5k,df), axis = 1)
+        data5k.head()
+  3.Determine the features affecting the ratings of any particular movie:
+
+        plt.figure(figsize=(20,8))
+        corr = data5k.corr()
+        sns.heatmap(corr,xticklabels=corr.columns.values,yticklabels=corr.columns.values,annot=True,annot_kws={'size':10})
+
+  4.Develop an appropriate model to predict the movie ratings:
+
+        feature_cols = ['Age','Occupation']
+        x = data5k[feature_cols]
+        x.head()
+        y = data5k['Rating']
+        display(y.head())
+        x_train,x_test,y_train,y_test = train_test_split(x,y,random_state=1)
+        print(x_train.shape)
+        print(y_train.shape)
+        print(x_test.shape)
+        print(y_test.shape)
+        from sklearn.linear_model import LinearRegression
+        linreg = LinearRegression()
+        linreg.fit(x_train,y_train)
+        print(linreg.intercept_)
+        print(linreg.coef_)
+        list(zip(feature_cols,linreg.coef_))
+        y_pred = linreg.predict(x_test)
+        print(np.sqrt(mean_squared_error(y_test,y_pred)))
+          
